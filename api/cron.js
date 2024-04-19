@@ -60,12 +60,12 @@ export default async function handler(request, response) {
               headers: { "oai-device-id": newDeviceId },
             }
           );
-          console.log(`系统: 成功获取会话 ID 和令牌。`);
+          // console.log(`系统: 成功获取会话 ID 和令牌。`);
 
           const token = myResponse.data.token;
           resolve({ oaiDeviceId: newDeviceId, token });
         } catch (error) {
-          console.error("发起请求时出错:", error.message);
+          // console.error("发起请求时出错:", error.message);
           errorCount++;
           resolve(null);
         }
@@ -86,13 +86,16 @@ export default async function handler(request, response) {
       return response.status(500).json({ error: "获取会话 ID 和令牌失败" });
     }
 
+    console.log(`成功获取 ${sessionsArr.length} 个会话 ID 和令牌。`);
+
     await redis.hset("session:pro", {
       refresh: 0,
       sessionArr: sessionsArr,
     });
-
+    console.log("成功存储令牌到数据库。");
     return response.json({ message: "成功获取并存储会话信息" });
   } catch (error) {
-    return response.status(500).json({ error: "获取会话 ID 和令牌失败" });
+    console.log("存储时出错:", error.message);
+    return response.status(500).json({ error: `存储时出错: ${error.name}` });
   }
 }

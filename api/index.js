@@ -149,12 +149,6 @@ export default async function handleChatCompletion(req, res) {
     res.status(429).end();
     return;
   }
-  console.log(
-    "Request:",
-    `${req.method} ${req.originalUrl}`,
-    `${req.body?.messages?.length || 0} messages`,
-    req.body.stream ? "(stream-enabled)" : "(stream-disabled)"
-  );
 
   try {
     const body = {
@@ -186,7 +180,13 @@ export default async function handleChatCompletion(req, res) {
         "openai-sentinel-chat-requirements-token": token,
       },
     });
-    console.log("oaiResponse:", response.status, response.statusText);
+    console.log(
+      "Request:",
+      `${req.method} ${req.originalUrl}`,
+      `${req.body?.messages?.length || 0} messages`,
+      req.body.stream ? "(stream-enabled)" : "(stream-disabled)",
+      `oaiResponse: ${response.status} ${response.statusText}`
+    );
     // Set the response headers based on the request type
     if (req.body.stream) {
       res.setHeader("Content-Type", "text/event-stream");
@@ -321,7 +321,8 @@ export default async function handleChatCompletion(req, res) {
       console.log(
         "oaiResponse:",
         error.response?.statusm,
-        error.response?.statusText
+        error.response?.statusText,
+        error.name
       );
       errorMessages = error.response?.statusText;
     } else {
