@@ -1,37 +1,42 @@
-import axios from "axios";
-import https from "https";
-import { randomUUID } from "crypto";
+export const config = {
+  runtime: "edge", // this is a pre-requisite
+};
 import { createClient } from "@vercel/kv";
+import jsSHA from "jssha/dist/sha3";
+const userAgent =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+const cores = [8, 12, 16, 24];
+const screens = [3000, 4000, 6000];
+function getConfig() {
+  const core = cores[Math.floor(Math.random() * cores.length)];
+  const screen = screens[Math.floor(Math.random() * screens.length)];
+  return [core + screen, "" + new Date(), 4294705152, 0, userAgent];
+}
+async function generateAnswer(seed, difficulty) {
+  let hash = null;
+  let config = getConfig();
+  for (let attempt = 0; attempt < 100000; attempt++) {
+    config[3] = attempt;
+    const configBase64 = Buffer.from(JSON.stringify(config)).toString("base64");
+    const hashInput = seed + configBase64;
+    const shaObj = new jsSHA("SHA3-512", "TEXT", { encoding: "UTF8" });
+    shaObj.update(hashInput);
+    const hash = shaObj.getHash("HEX");
+    if (hash.substring(0, difficulty.length) <= difficulty) {
+      return "gAAAAAB" + configBase64;
+    }
+  }
+  hash = Buffer.from(`"${seed}"`).toString("base64");
+  return "gAAAAABwQ8Lk5FbGpA2NcR9dShT6gYjU7VxZ4D" + hash;
+}
 
-const baseUrl = "https://chat.openai.com";
-
-const axiosInstance = axios.create({
-  httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-  headers: {
-    accept: "*/*",
-    "accept-language": "en-US,en;q=0.9",
-    "cache-control": "no-cache",
-    "content-type": "application/json",
-    "oai-language": "en-US",
-    origin: baseUrl,
-    pragma: "no-cache",
-    referer: baseUrl,
-    "sec-ch-ua":
-      '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"Windows"',
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
-    "user-agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-  },
-});
-
-export default async function handler(request, response) {
+async function getSession(reqUrl) {
   let redis;
   // 如果使用了Upstash, 就
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  if (
+    process.env.UPSTASH_REDIS_REST_URL &&
+    process.env.UPSTASH_REDIS_REST_TOKEN
+  ) {
     redis = createClient({
       url: process.env.UPSTASH_REDIS_REST_URL,
       token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -49,23 +54,21 @@ export default async function handler(request, response) {
   const SessionNum = 16;
 
   for (let i = 0; i < SessionNum; i++) {
-    const newDeviceId = randomUUID();
     const promise = new Promise(async (resolve, reject) => {
       setTimeout(async () => {
         try {
-          const myResponse = await axiosInstance.post(
-            `${baseUrl}/backend-anon/sentinel/chat-requirements`,
-            {},
-            {
-              headers: { "oai-device-id": newDeviceId },
-            }
-          );
-          console.log(`系统: 成功获取会话 ID 和令牌。`);
+          const response = await fetch(`${reqUrl.origin}/api/requirements`);
+          const myResponse = await response.json();
+          // console.log(`系统: 成功获取会话 ID 和令牌。`);
+          const token = myResponse.token;
+          const newDeviceId = myResponse.deviceid;
+          const proofofwork = myResponse.proofofwork;
+          const { seed, difficulty } = proofofwork;
 
-          const token = myResponse.data.token;
-          resolve({ oaiDeviceId: newDeviceId, token });
+          const proof = await generateAnswer(seed, difficulty);
+          resolve({ oaiDeviceId: newDeviceId, token, proof });
         } catch (error) {
-          console.error("发起请求时出错:", error.message);
+          // console.error("发起请求时出错:", error.message);
           errorCount++;
           resolve(null);
         }
@@ -83,16 +86,22 @@ export default async function handler(request, response) {
     });
 
     if (errorCount === SessionNum) {
-      return response.status(500).json({ error: "获取会话 ID 和令牌失败" });
+      return "获取会话 ID 和令牌失败";
     }
 
     await redis.hset("session:pro", {
       refresh: 0,
       sessionArr: sessionsArr,
     });
-
-    return response.json({ message: "成功获取并存储会话信息" });
+    return `成功存储${sessionsArr.length}个令牌到数据库。`;
   } catch (error) {
-    return response.status(500).json({ error: "获取会话 ID 和令牌失败" });
+    return "存储时出错:" + error.message;
   }
+}
+
+export function GET(request, context) {
+  let reqUrl = new URL(request.url);
+  context.waitUntil(getSession(reqUrl).then((json) => console.log({ json })));
+
+  return new Response(`已开始获取OAI令牌!`);
 }

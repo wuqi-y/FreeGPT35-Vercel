@@ -12,6 +12,9 @@ import { createClient } from "@vercel/kv";
 const baseUrl = "https://chat.openai.com";
 const apiUrl = `${baseUrl}/backend-anon/conversation`;
 
+const userAgent =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+  
 function GenerateCompletionId(prefix = "cmpl-") {
   const characters =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -65,14 +68,13 @@ const axiosInstance = axios.create({
     pragma: "no-cache",
     referer: baseUrl,
     "sec-ch-ua":
-      '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+      '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
     "sec-ch-ua-mobile": "?0",
     "sec-ch-ua-platform": '"Windows"',
     "sec-fetch-dest": "empty",
     "sec-fetch-mode": "cors",
     "sec-fetch-site": "same-origin",
-    "user-agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "user-agent": userAgent
   },
 });
 
@@ -143,18 +145,12 @@ export default async function handleChatCompletion(req, res) {
 
   const { sessionArr, refresh } = await redis.hgetall("session:pro");
   const randomNum = Math.floor(Math.random() * sessionArr.length);
-  const { token, oaiDeviceId } = sessionArr[randomNum];
+  const { token, oaiDeviceId, proof } = sessionArr[randomNum];
 
   if (refresh == 1) {
     res.status(429).end();
     return;
   }
-  console.log(
-    "Request:",
-    `${req.method} ${req.originalUrl}`,
-    `${req.body?.messages?.length || 0} messages`,
-    req.body.stream ? "(stream-enabled)" : "(stream-disabled)"
-  );
 
   try {
     const body = {
@@ -184,9 +180,16 @@ export default async function handleChatCompletion(req, res) {
       headers: {
         "oai-device-id": oaiDeviceId,
         "openai-sentinel-chat-requirements-token": token,
+        "Openai-Sentinel-Proof-Token": proof,
       },
     });
-    console.log("oaiResponse:", response.status, response.statusText);
+    console.log(
+      "Request:",
+      `${req.method} ${req.originalUrl}`,
+      `${req.body?.messages?.length || 0} messages`,
+      req.body.stream ? "(stream-enabled)" : "(stream-disabled)",
+      `oaiResponse: ${response.status} ${response.statusText}`
+    );
     // Set the response headers based on the request type
     if (req.body.stream) {
       res.setHeader("Content-Type", "text/event-stream");
@@ -321,7 +324,8 @@ export default async function handleChatCompletion(req, res) {
       console.log(
         "oaiResponse:",
         error.response?.statusm,
-        error.response?.statusText
+        error.response?.statusText,
+        error.name
       );
       errorMessages = error.response?.statusText;
     } else {
