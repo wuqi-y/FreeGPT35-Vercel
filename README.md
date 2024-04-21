@@ -1,5 +1,6 @@
 简体中文 / [English](./README_en.md)
-# 我Vercel又复活啦!!!!!! 已支持流式响应!!!!!! 
+# 又复活了! 但是需要额外设置环境变量`PUBLIC_URL`为最终使用的url了
+# 总而言之最终目的时为了拿到更多的token，可以环境变量自定义token数量了，酌情修改，够用就行
 # 并发这次也确实提高了, 之前确实测得不准，这次真够用了
 #### 测试接口: [https://testgpt.iqaq.me/](https://testgpt.iqaq.me/)
 ### ChatGPT Next Web 测试: 
@@ -31,12 +32,13 @@ Vercel Pro 计划 超时上限为300s，并且自带cron计划任务[跳转Pro�
 3. 点击`Deploy`，等待部署完成
 4. 进入`Storage`选项卡，创建一个`KV`数据库，`Database Name`随便起，`Primary Region`区域推荐选`San Francisco`，点击`Create`
 5. 务必确认`kv`数据库的`Projects`选项卡连接了你的项目
-6. (可选) 在`Settings`的`Domains`下绑定你自己的域名。
-7. 转到顶部`Deployments`选项卡，`Redeploy`重新部署你的项目
-
-8. (免费计划用户)到[cron-job](https://console.cron-job.org/)创建一个定时访问刷新token的任务，填上`https://你的域名/api/cron`，选个每两分钟，`Create`就好了，有其他类似Uptime Kuma也一样。
+6. **在 `Settings`选项卡`Environment Variables` 中填入 `PUBLIC_URL` 值为你将要使用该项目时的url，以`https://`开头
+例如: `https://你的域名`(新版本该环境变量为必须设置，总之为了提高获取token数量，所以当前版本token数可以自定义了)**
+7. (可选) 在`Settings`的`Domains`下绑定你自己的域名。
+8.  转到顶部`Deployments`选项卡，`Redeploy`重新部署你的项目
+9.  (免费计划用户)到[cron-job](https://console.cron-job.org/)创建一个定时访问刷新token的任务，填上`https://你的域名/api/cron`，选个每两分钟，`Create`就好了，有其他类似Uptime Kuma也一样。
 ![Cron](./img/cron.png)
-9. 完成! 鼓掌，第一次部署完建议手动访问一下`https://你的域名/api/cron`刷新token
+1.  完成! 鼓掌，第一次部署完建议手动访问一下`https://你的域名/api/cron`刷新token
 
 --------------------
 
@@ -49,13 +51,15 @@ Vercel Pro 计划 超时上限为300s，并且自带cron计划任务[跳转Pro�
 ![Upstash API](./img/3upstashapi.png)
 4. fork 本仓库，fork时，取消勾选 `Copy the main branch only`
 5. 在vercel中导入您fork的仓库
-6. 在 `Environment Variables` 输入框中填入 第3步 的两对数据
+6. 在 `Environment Variables` 输入框中填入 第3步 的两对数据，并可以考虑提前把第9步的环境变量设置了
 ![Environment Variables](./img/environment.png)
 7. 点击`Deploy`
 8. (可选) 在`Settings`的`Domains`下绑定你自己的域名。
-9. 转到顶部`Deployments`选项卡，`Redeploy`重新部署你的项目
-10. (同上 8. 免费计划用户需要设置cron-job.org定时任务)
-11. 完成! 鼓掌，第一次部署完建议手动访问一下`https://你的域名/api/cron`刷新token
+9. **在 `Settings`选项卡`Environment Variables` 中填入 `PUBLIC_URL` 值为你将要使用该项目时的url，以`https://`开头
+例如: `https://你的域名`(新版本该环境变量为必须设置，总之为了提高获取token数量，所以当前版本token数可以自定义了)**
+10. 转到顶部`Deployments`选项卡，`Redeploy`重新部署你的项目
+11. (同上 8. 免费计划用户需要设置cron-job.org定时任务)
+12. 完成! 鼓掌，第一次部署完建议手动访问一下`https://你的域名/api/cron`刷新token
 
 --------------------
 
@@ -91,13 +95,14 @@ curl https://[Your Vercel Domain]/v1/chat/completions \
 ## 高级设置
 ### 环境变量 (如果你不知道是干嘛的，请不要随意设置)
 
-| Key                       | Value                         | 解释                                          | 要求  |
+| Key                       | 示例值                         | 解释                                          | 要求  |
 |---------------------------|-------------------------------|-----------------------------------------------|-------|
-| `AUTH_TOKEN`              | You_set_the_apikey_yourself.  | 你为自己接口设置的apikey。                      | 可选  |
-| `UPSTASH_REDIS_REST_URL`  | Your_Upstash_URL              | 你的Upstash Redis数据库的URL                   | 可选   |
-| `UPSTASH_REDIS_REST_TOKEN`| Your_Upstash_Token            | 你的Upstash Redis数据库的Token                 | 可选   |
-### 并发调整
-默认定时4分钟更新16个token，token决定并发，一般绝对够用了，如需上调要考虑能在10s请求时间上限内刷新完token (Pro用户可自行规划)
+| `PUBLIC_URL`              | https://example.com           | 你项目的url链接:以"https://"开头。              | **必须**  |
+| `AUTH_TOKEN`              | myapikey                     | 你为自己接口设置的apikey。                      | 可选  |
+| `UPSTASH_REDIS_REST_URL`  | https://usw1-xx-xx-12345.upstash.io | 你的Upstash Redis数据库的URL             | 可选   |
+| `UPSTASH_REDIS_REST_TOKEN`| AYVwASQgMjk4xxxTk...(太长了省略) | 你的Upstash Redis数据库的Token                 | 可选   |
+| `CONCURRENT_TOKENS`       | 24                            | 每次刷新token时的获取的token数量(影响并发)，默认值`16`  | 可选   |
+
 ## 兼容性
 
 您可以在任何客户端中使用它，如 `OpenCat`、`Next-Chat`、`Lobe-Chat`、`Bob` 等。在**API Key**中随意填写任何字符串或者你设置了`AUTH_TOKEN`，就填写它。
