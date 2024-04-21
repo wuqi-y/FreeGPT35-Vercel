@@ -1,7 +1,5 @@
 简体中文 / [English](./README_en.md)
-# 又复活了! 但是需要额外设置环境变量`PUBLIC_URL`为最终使用的url了
-# 总而言之最终目的时为了拿到更多的token，可以环境变量自定义token数量了，酌情修改，够用就行
-# 并发这次也确实提高了, 之前确实测得不准，这次真够用了
+# 半死不活了! token一次就失效，每次都额外请求一次拿新的，并发是不要想了，能用都不错了...数据库和定时任务暂时不需要了，后面再想吧
 #### 测试接口: [https://testgpt.iqaq.me/](https://testgpt.iqaq.me/)
 ### ChatGPT Next Web 测试: 
 #### 在线体验: [https://chat.iqaq.me/](https://chat.iqaq.me/)

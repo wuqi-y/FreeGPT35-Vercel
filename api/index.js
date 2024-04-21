@@ -6,7 +6,7 @@ import axios from "axios";
 import https from "https";
 import { encode } from "gpt-3-encoder";
 import { randomUUID } from "crypto";
-import { createClient } from "@vercel/kv";
+import jsSHA from "jssha/dist/sha3";
 
 // Constants for the server and API configuration
 const baseUrl = "https://chat.openai.com";
@@ -14,7 +14,31 @@ const apiUrl = `${baseUrl}/backend-anon/conversation`;
 
 const userAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
-  
+const cores = [8, 12, 16, 24];
+const screens = [3000, 4000, 6000];
+function getConfig() {
+  const core = cores[Math.floor(Math.random() * cores.length)];
+  const screen = screens[Math.floor(Math.random() * screens.length)];
+  return [core + screen, "" + new Date(), 4294705152, 0, userAgent];
+}
+async function generateAnswer(seed, difficulty) {
+  let hash = null;
+  let config = getConfig();
+  for (let attempt = 0; attempt < 100000; attempt++) {
+    config[3] = attempt;
+    const configBase64 = Buffer.from(JSON.stringify(config)).toString("base64");
+    const hashInput = seed + configBase64;
+    const shaObj = new jsSHA("SHA3-512", "TEXT", { encoding: "UTF8" });
+    shaObj.update(hashInput);
+    const hash = shaObj.getHash("HEX");
+    if (hash.substring(0, difficulty.length) <= difficulty) {
+      return "gAAAAAB" + configBase64;
+    }
+  }
+  hash = Buffer.from(`"${seed}"`).toString("base64");
+  return "gAAAAABwQ8Lk5FbGpA2NcR9dShT6gYjU7VxZ4D" + hash;
+}
+
 function GenerateCompletionId(prefix = "cmpl-") {
   const characters =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -74,38 +98,10 @@ const axiosInstance = axios.create({
     "sec-fetch-dest": "empty",
     "sec-fetch-mode": "cors",
     "sec-fetch-site": "same-origin",
-    "user-agent": userAgent
+    "user-agent": userAgent,
   },
 });
 
-// 429故障处理
-async function errorHandler(host, redis) {
-  const lock = await redis.set("lock_key", "locked", { ex: 10, nx: true });
-  if (lock !== "OK") {
-    console.log("lock_key is locked");
-    // 获取锁失败,直接返回
-    return false;
-  }
-
-  try {
-    console.log("get lock_key success");
-    // 获取锁成功,进行错误处理...
-    console.log("waitunitUrl:", `https://${host}/api/waitunit`);
-
-    const waitunitResponse = await fetch(`https://${host}/api/waitunit`);
-    console.log(
-      "waitunitResponse:",
-      waitunitResponse.status,
-      waitunitResponse.statusText
-    );
-    const ref = await redis.hset("session:pro", { refresh: 1 });
-    console.log("refresh:", ref);
-  } finally {
-    // 释放锁
-    await redis.del("lock_key");
-    return true;
-  }
-}
 
 // Middleware to handle chat completions
 export default async function handleChatCompletion(req, res) {
@@ -129,28 +125,25 @@ export default async function handleChatCompletion(req, res) {
     res.status(401).end();
     return;
   }
-  let redis;
-  // 如果使用了Upstash, 就使用Upstash
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    redis = createClient({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    });
-  } else {
-    redis = createClient({
-      url: process.env.KV_REST_API_URL,
-      token: process.env.KV_REST_API_TOKEN,
-    });
-  }
 
-  const { sessionArr, refresh } = await redis.hgetall("session:pro");
-  const randomNum = Math.floor(Math.random() * sessionArr.length);
-  const { token, oaiDeviceId, proof } = sessionArr[randomNum];
-
-  if (refresh == 1) {
-    res.status(429).end();
-    return;
+  const oaiDeviceId = randomUUID();
+  let token, proofofwork;
+  try {
+    const myResponse = await axiosInstance.post(
+      `${baseUrl}/backend-anon/sentinel/chat-requirements`,
+      {},
+      {
+        headers: { "oai-device-id": oaiDeviceId },
+      }
+    );
+    token = myResponse.data.token;
+    proofofwork = myResponse.data.proofofwork;
+    console.log(`成功获取 pow 和令牌。`);
+  } catch (error) {
+    console.log("获取令牌出错:", error.message);
   }
+  const { seed, difficulty } = proofofwork;
+  const proof = await generateAnswer(seed, difficulty);
 
   try {
     const body = {
@@ -318,8 +311,6 @@ export default async function handleChatCompletion(req, res) {
     if (error.response?.status == 429) {
       console.log("oaiResponse: 429 Too Many Request!");
       errorMessages = "Too Many Request!";
-      // 429 故障处理，暂不需要了
-      // await errorHandler(host, redis);
     } else if (error.response?.status != undefined) {
       console.log(
         "oaiResponse:",

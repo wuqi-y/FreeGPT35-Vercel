@@ -109,7 +109,7 @@ async function getSession(reqUrl) {
 
 export function GET(request, context) {
   let reqUrl = new URL(request.url);
-  context.waitUntil(getSession(reqUrl).then((json) => console.log({ json })));
+  // context.waitUntil(getSession(reqUrl).then((json) => console.log({ json })));
 
-  return new Response(`已开始获取OAI令牌!`);
+  return new Response(`暂不需要定时任务!`);
 }
