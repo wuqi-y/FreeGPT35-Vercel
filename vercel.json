@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "regions": ["sfo1"],
+  "regions": ["hnd1"],
   "rewrites": [
     {
       "source": "/v1/chat/completions",
@@ -9,12 +9,6 @@
     {
       "source": "/",
       "destination": "/api/guide"
-    }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron",
-      "schedule": "*/4 * * * *"
     }
   ],
   "functions": {
