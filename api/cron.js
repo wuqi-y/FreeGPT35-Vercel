@@ -62,7 +62,7 @@ async function getSession(reqUrl) {
         try {
           requestUrl = process.env.PUBLIC_URL || reqUrl.origin;
           const response = await fetch(`${requestUrl}/api/requirements`);
-          if(response.status !== 401) {
+          if(response.status == 401) {
             console.log('请设置环境变量PUBLIC_URL为你的网站地址');
             resolve(null);
           }
