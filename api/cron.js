@@ -3,6 +3,9 @@ export const config = {
 };
 import { createClient } from "@vercel/kv";
 import jsSHA from "jssha/dist/sha3";
+
+const SessionNum = parseInt(process.env.CONCURRENT_TOKENS || "16", 10);
+
 const userAgent =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const cores = [8, 12, 16, 24];
@@ -51,13 +54,18 @@ async function getSession(reqUrl) {
   const sessionsArr = [];
   const promises = [];
   let errorCount = 0;
-  const SessionNum = 16;
+
 
   for (let i = 0; i < SessionNum; i++) {
     const promise = new Promise(async (resolve, reject) => {
       setTimeout(async () => {
         try {
-          const response = await fetch(`${reqUrl.origin}/api/requirements`);
+          requestUrl = process.env.PUBLIC_URL || reqUrl.origin;
+          const response = await fetch(`${requestUrl}/api/requirements`);
+          if(response.status !== 401) {
+            console.log('请设置环境变量PUBLIC_URL为你的网站地址');
+            resolve(null);
+          }
           const myResponse = await response.json();
           // console.log(`系统: 成功获取会话 ID 和令牌。`);
           const token = myResponse.token;
