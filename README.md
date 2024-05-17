@@ -1,13 +1,9 @@
 简体中文 / [English](./README_en.md)
-# 回到最初的最初了，基本等于初版! 
-# token一次就失效，每次都额外请求一次拿新的，并发低了很多...数据库和定时任务暂时不需要了，后面再想吧
-#### 测试接口: [https://testgpt.iqaq.me/](https://testgpt.iqaq.me/)
-### ChatGPT Next Web 测试: 
-#### 在线体验: [https://chat.iqaq.me/](https://chat.iqaq.me/)
-当然这么长的回复10s肯定发不完
-![Stream](./img/Stream.gif)
+
+[Vercel免费版升级为60s](https://vercel.com/changelog/vercel-functions-for-hobby-can-now-run-up-to-60-seconds)
+
 #### 依然存在的问题
-- 超过10s之后会断流。(因为Vercel免费版持续时间最大值10秒，因此使用沉浸式翻译记得降低`最大文本长度`到600左右，并发30)。
+- 超过60s之后会断流。(因为Vercel免费版持续时间最大值60秒，因此使用沉浸式翻译记得降低`最大文本长度`到600左右，并发30)。
 #### 解决办法:
 Vercel Pro 计划 超时上限为300s，并且自带cron计划任务[跳转Pro部署介绍](#3-vercel-pro-计划的尊贵用户移除请求最大持续时间10s上限)
 
