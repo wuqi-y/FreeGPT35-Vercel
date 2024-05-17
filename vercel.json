@@ -10,5 +10,10 @@
       "source": "/",
       "destination": "/api/guide"
     }
-  ]
+  ],
+  "functions": {
+    "api/**/*": {
+      "maxDuration": 60
+    }
+  }
 }
