@@ -9,7 +9,7 @@ import { randomUUID } from "crypto";
 import jsSHA from "jssha/dist/sha3";
 
 // Constants for the server and API configuration
-const baseUrl = "https://chat.openai.com";
+const baseUrl = "https://chatgpt.com";
 const apiUrl = `${baseUrl}/backend-anon/conversation`;
 
 const userAgent =
